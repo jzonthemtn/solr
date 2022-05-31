@@ -17,9 +17,7 @@
 
 package org.apache.solr.update.processor;
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.opennlp.tools.NLPNERTaggerOp;
-import org.apache.lucene.analysis.opennlp.tools.OpenNLPOpsFactory;
+import opennlp.dl.doccat.DocumentCategorizerDL;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.SolrInputField;
@@ -28,7 +26,6 @@ import org.apache.solr.common.util.Pair;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
-import org.apache.solr.schema.FieldType;
 import org.apache.solr.update.AddUpdateCommand;
 import org.apache.solr.update.processor.FieldMutatingUpdateProcessor.FieldNameSelector;
 import org.apache.solr.update.processor.FieldMutatingUpdateProcessorFactory.SelectorParams;
@@ -36,6 +33,7 @@ import org.apache.solr.util.plugin.SolrCoreAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -68,8 +66,8 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
 
     private FieldNameSelector srcSelector = null;
 
-    private String modelFile = null;
-    private String vocabFile = null;
+    private String model = null;
+    private String vocab = null;
     private String analyzerFieldType = null;
 
     /**
@@ -122,7 +120,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
         if (!(modelParam instanceof CharSequence)) {
             throw new SolrException(SERVER_ERROR, "Init param '" + MODEL_PARAM + "' must be a <str>");
         }
-        modelFile = modelParam.toString();
+        model = modelParam.toString();
 
         Object vocabParam = args.remove(VOCAB_PARAM);
         if (null == vocabParam) {
@@ -131,7 +129,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
         if (!(vocabParam instanceof CharSequence)) {
             throw new SolrException(SERVER_ERROR, "Init param '" + VOCAB_PARAM + "' must be a <str>");
         }
-        vocabFile = vocabParam.toString();
+        vocab = vocabParam.toString();
 
         if (0 < args.size()) {
             throw new SolrException(SERVER_ERROR, "Unexpected init param(s): '" + args.getName(0) + "'");
@@ -409,12 +407,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
                                     exc,
                                     FieldMutatingUpdateProcessor.SELECT_NO_FIELDS));
         }
-        try {
-            // TODO: Load the ONNX doccat model.
-            OpenNLPOpsFactory.getNERTaggerModel(modelFile, core.getResourceLoader());
-        } catch (IOException e) {
-            throw new IllegalArgumentException(e);
-        }
+
     }
 
     @Override
@@ -423,11 +416,13 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
         final FieldNameSelector srcSelector = getSourceSelector();
         return new UpdateRequestProcessor(next) {
 
+            final DocumentCategorizerDL documentCategorizerDL;
+
             {
                 // TODO: Need any initialization?
-
-                final DocumentCategorizerDL documentCategorizerDL =
-                        new DocumentCategorizerDL(model, vocab, getCategories());
+                final File modelFile = new File(model);
+                final File vocabFile = new File(vocab);
+                documentCategorizerDL = new DocumentCategorizerDL(modelFile, vocabFile, getCategories());
 
             }
 
@@ -495,12 +490,19 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
             private List<Pair<String, String>> classify(Object srcFieldValue) {
 
                 String fullText = srcFieldValue.toString();
-                // TODO: Send the fullText to the model for classification.
-                // TODO: Add the categories to the list and return it.
+
+                // Send the fullText to the model for classification.
+                final double[] result = documentCategorizerDL.categorize(new String[]{fullText});
+
+                // Add the categories to the list and return it.
+                // Just take the top category for now.
+                // TODO: Allow for a threshold value for returning categories.
 
                 List<Pair<String, String>> classifications = new ArrayList<>();
 
-                Pair<String, String> pair = new Pair<>("classification", "news");
+                String bestCategory = documentCategorizerDL.getBestCategory(result);
+
+                Pair<String, String> pair = new Pair<>("classification", bestCategory);
                 classifications.add(pair);
 
                 return classifications;
@@ -513,4 +515,21 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
     private static SelectorParams parseSelectorParams(NamedList<?> args) {
         return FieldMutatingUpdateProcessorFactory.parseSelectorParams(args);
     }
+
+    private Map<Integer, String> getCategories() {
+
+        // TODO: Read these from the Solr config for the processor.
+
+        final Map<Integer, String> categories = new HashMap<>();
+
+        categories.put(0, "very bad");
+        categories.put(1, "bad");
+        categories.put(2, "neutral");
+        categories.put(3, "good");
+        categories.put(4, "very good");
+
+        return categories;
+
+    }
+
 }
