@@ -62,7 +62,6 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
     public static final String REPLACEMENT_PARAM = "replacement";
     public static final String MODEL_PARAM = "modelFile";
     public static final String VOCAB_PARAM = "vocabFile";
-    public static final String ANALYZER_FIELD_TYPE_PARAM = "analyzerFieldType";
 
     private SelectorParams srcInclusions = new SelectorParams();
     private Collection<SelectorParams> srcExclusions = new ArrayList<>();
@@ -133,17 +132,6 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
             throw new SolrException(SERVER_ERROR, "Init param '" + VOCAB_PARAM + "' must be a <str>");
         }
         vocabFile = vocabParam.toString();
-
-        Object analyzerFieldTypeParam = args.remove(ANALYZER_FIELD_TYPE_PARAM);
-        if (null == analyzerFieldTypeParam) {
-            throw new SolrException(
-                    SERVER_ERROR, "Missing required init param '" + ANALYZER_FIELD_TYPE_PARAM + "'");
-        }
-        if (!(analyzerFieldTypeParam instanceof CharSequence)) {
-            throw new SolrException(
-                    SERVER_ERROR, "Init param '" + ANALYZER_FIELD_TYPE_PARAM + "' must be a <str>");
-        }
-        analyzerFieldType = analyzerFieldTypeParam.toString();
 
         if (0 < args.size()) {
             throw new SolrException(SERVER_ERROR, "Unexpected init param(s): '" + args.getName(0) + "'");
@@ -434,26 +422,13 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
             SolrQueryRequest req, SolrQueryResponse rsp, UpdateRequestProcessor next) {
         final FieldNameSelector srcSelector = getSourceSelector();
         return new UpdateRequestProcessor(next) {
-            private final NLPNERTaggerOp nerTaggerOp;
-            private Analyzer analyzer = null;
 
             {
-                try {
-                    // TODO: Get the NameFinder.
-                    nerTaggerOp = OpenNLPOpsFactory.getNERTagger(modelFile);
-                    FieldType fieldType = req.getSchema().getFieldTypeByName(analyzerFieldType);
-                    if (fieldType == null) {
-                        throw new SolrException(
-                                SERVER_ERROR,
-                                ANALYZER_FIELD_TYPE_PARAM
-                                        + " '"
-                                        + analyzerFieldType
-                                        + "' not found in the schema.");
-                    }
-                    analyzer = fieldType.getIndexAnalyzer();
-                } catch (IOException e) {
-                    throw new IllegalArgumentException(e);
-                }
+                // TODO: Need any initialization?
+
+                final DocumentCategorizerDL documentCategorizerDL =
+                        new DocumentCategorizerDL(model, vocab, getCategories());
+
             }
 
             @Override
@@ -490,8 +465,8 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
                     for (Object val : srcFieldValues) {
                         for (Pair<String, String> entity : classify(val)) {
                             SolrInputField destField = null;
-                            String entityName = entity.first();
-                            String entityType = entity.second();
+                            String classification = entity.first();
+                            String classificationValue = entity.second();
                             final String resolved = resolvedDest;
                             if (doc.containsKey(resolved)) {
                                 destField = doc.getField(resolved);
@@ -503,7 +478,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
                                     destField = targetField;
                                 }
                             }
-                            destField.addValue(entityName);
+                            destField.addValue(classification);
 
                             // put it in map to avoid concurrent modification...
                             destMap.put(resolved, destField);
@@ -517,9 +492,6 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
                 super.processAdd(cmd);
             }
 
-            /**
-             * Using configured NER model, extracts (name, type) pairs from the given source field value
-             */
             private List<Pair<String, String>> classify(Object srcFieldValue) {
 
                 String fullText = srcFieldValue.toString();
@@ -528,7 +500,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
 
                 List<Pair<String, String>> classifications = new ArrayList<>();
 
-                Pair<String, String> pair = new Pair<>("category", "news");
+                Pair<String, String> pair = new Pair<>("classification", "news");
                 classifications.add(pair);
 
                 return classifications;
