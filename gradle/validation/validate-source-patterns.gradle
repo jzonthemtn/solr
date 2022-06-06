@@ -114,12 +114,12 @@ configure(project(':solr:server')) {
   }
 }
 
-configure(project(':solr:solr-ref-guide')) {
+/*configure(project(':solr:solr-ref-guide')) {
   project.tasks.withType(ValidateSourcePatternsTask) {
     sourceFiles.exclude 'modules/indexing-guide/examples/stemdict.txt' // requires tabs
     sourceFiles.exclude 'node_modules/**' // slightly hackish, this downloads all of the node deps
   }
-}
+}*/
 
 class ValidateSourcePatternsTask extends DefaultTask {
   private ProgressLoggerFactory progressLoggerFactory

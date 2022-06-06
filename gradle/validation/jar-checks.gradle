@@ -364,10 +364,10 @@ configure(project(":solr")) {
 }
 
 // solr-ref-guide doesn't contribute any JARs to dependency checks.
-configure(project(":solr:solr-ref-guide")) {
+/*configure(project(":solr:solr-ref-guide")) {
   configurations {
     jarValidation {
       exclude group: "*"
     }
   }
-}
+}*/

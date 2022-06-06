@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-configure([project(":solr:packaging"), project(":solr:solr-ref-guide")]) {
+/*configure([project(":solr:packaging"), project(":solr:solr-ref-guide")]) {
     apply plugin: "com.github.node-gradle.node"
 
     ext {
@@ -38,4 +38,4 @@ configure([project(":solr:packaging"), project(":solr:solr-ref-guide")]) {
         // By default it is at the root of the current project
         nodeProjectDir = project.ext.nodeProjectDir
     }
-}
+}*/

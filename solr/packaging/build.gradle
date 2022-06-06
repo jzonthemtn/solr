@@ -150,7 +150,7 @@ distZip.enabled = false
 
 assemble.dependsOn installDist
 
-task downloadBats(type: NpmTask) {
+/*task downloadBats(type: NpmTask) {
   group = 'Build Dependency Download'
   args = ["install", "bats",
                      "ztombol/bats-support",
@@ -161,9 +161,9 @@ task downloadBats(type: NpmTask) {
   outputs.dir("${project.ext.nodeProjectDir}/node_modules/bats")
   outputs.dir("${project.ext.nodeProjectDir}/node_modules/bats-support")
   outputs.dir("${project.ext.nodeProjectDir}/node_modules/bats-assert")
-}
+}*/
 
-task integrationTests(type: BatsTask) {
+/*task integrationTests(type: BatsTask) {
   dependsOn installDist
   dependsOn downloadBats
 
@@ -190,9 +190,9 @@ task integrationTests(type: BatsTask) {
   environment SOLR_LOGS_DIR: "$solrHome/logs"
   environment TEST_FAILURE_DIR: solrTestFailuresDir
   environment BATS_LIB_PREFIX: "$nodeProjectDir/node_modules"
-}
+}*/
 
-class BatsTask extends Exec {
+/*class BatsTask extends Exec {
   @InputDirectory
   String testDir = 'test'
 
@@ -216,4 +216,4 @@ class BatsTask extends Exec {
 
     super.exec()
   }
-}
+}*/
