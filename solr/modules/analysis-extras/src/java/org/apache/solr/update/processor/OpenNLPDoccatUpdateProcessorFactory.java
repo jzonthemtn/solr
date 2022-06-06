@@ -89,6 +89,8 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
   @Override
   public void init(NamedList<?> args) {
 
+    System.out.println("In OpenNLP doccat init()");
+
     // high level (loose) check for which type of config we have.
     //
     // individual init methods do more strict syntax checking
@@ -118,6 +120,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
       throw new SolrException(SERVER_ERROR, "Init param '" + MODEL_PARAM + "' must be a <str>");
     }
     model = modelParam.toString();
+    System.out.println("In OpenNLP doccat - model: " + model);
 
     Object vocabParam = args.remove(VOCAB_PARAM);
     if (null == vocabParam) {
@@ -415,9 +418,10 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
       final DocumentCategorizerDL documentCategorizerDL;
 
       {
-        // TODO: Need any initialization?
+        // Initialize the categorizer.
         final File modelFile = new File(model);
         final File vocabFile = new File(vocab);
+        System.out.println("In OpenNLP doccat initializing the documentCategorizerDL");
         documentCategorizerDL = new DocumentCategorizerDL(modelFile, vocabFile, getCategories());
       }
 
@@ -455,7 +459,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
           for (Object val : srcFieldValues) {
             for (Pair<String, String> entity : classify(val)) {
               SolrInputField destField = null;
-              String classification = entity.first();
+              //String classification = entity.first();
               String classificationValue = entity.second();
               final String resolved = resolvedDest;
               if (doc.containsKey(resolved)) {
@@ -468,7 +472,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
                   destField = targetField;
                 }
               }
-              destField.addValue(classification);
+              destField.addValue(classificationValue);
 
               // put it in map to avoid concurrent modification...
               destMap.put(resolved, destField);
@@ -487,6 +491,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
         String fullText = srcFieldValue.toString();
 
         // Send the fullText to the model for classification.
+        System.out.println("In OpenNLP doccat callling categorizer()");
         final double[] result = documentCategorizerDL.categorize(new String[] {fullText});
 
         // Add the categories to the list and return it.
@@ -496,6 +501,7 @@ public class OpenNLPDoccatUpdateProcessorFactory extends UpdateRequestProcessorF
         List<Pair<String, String>> classifications = new ArrayList<>();
 
         String bestCategory = documentCategorizerDL.getBestCategory(result);
+        System.out.println("In OpenNLP doccat - best category = " + bestCategory);
 
         Pair<String, String> pair = new Pair<>("classification", bestCategory);
         classifications.add(pair);
