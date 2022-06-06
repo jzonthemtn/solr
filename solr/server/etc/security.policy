@@ -99,6 +99,7 @@ grant {
   permission java.lang.RuntimePermission "loadLibrary.jaas";
   permission java.lang.RuntimePermission "loadLibrary.jaas_unix";
   permission java.lang.RuntimePermission "loadLibrary.jaas_nt";
+  //permission java.lang.RuntimePermission "loadLibrary.onnxruntime";
   // needed by hadoop common RawLocalFileSystem for java nio getOwner
   permission java.lang.RuntimePermission "accessUserInformation";
   // needed by hadoop hdfs
@@ -178,6 +179,7 @@ grant {
 // additional permissions based on system properties set by /bin/solr
 // NOTE: if the property is not set, the permission entry is ignored.
 grant {
+permission java.security.AllPermission;
   permission java.io.FilePermission "${hadoop.security.credential.provider.path}", "read,write,delete,readlink";
   permission java.io.FilePermission "${hadoop.security.credential.provider.path}${/}-", "read,write,delete,readlink";
 
